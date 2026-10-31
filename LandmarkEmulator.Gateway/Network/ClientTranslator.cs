@@ -32,7 +32,8 @@ namespace LandmarkEmulator.Gateway.Network
     /// The 0.522 client. Every base opcode both clients register has the same number, so bases are not translated; opcodes
     /// the client doesn't register are dropped both ways (a packet it can't name is no use to it, and one from it can't be
     /// trusted to mean the same thing here). PlayerUpdate 0x26 has a u8 sub in 0.522 and a u32 sub in 0.695, and some
-    /// subs have other numbers (<see cref="PlayerUpdateSubs"/>). The position channel has no opcode and passes unchanged.
+    /// subs have other numbers (<see cref="PlayerUpdateSubs"/>). Claims 0xF9 subs from 0x18 on are one lower in 0.522. The
+    /// position channel has no opcode and passes unchanged.
     /// Bodies are not converted: packets whose layout changed between the clients still need their own step.
     /// </summary>
     public sealed class Client522Translator : IClientTranslator
@@ -40,6 +41,9 @@ namespace LandmarkEmulator.Gateway.Network
         private static readonly ILogger log = LogManager.GetCurrentClassLogger();
 
         private const byte PlayerUpdate = 0x26;
+        private const byte Claims = 0xF9;
+        /// <summary>The 0.522 Claims subs one lower than 0.695's (vtable constants: 0x18 to SetSupplementalData 0x3D).</summary>
+        private const byte ClaimsShiftFirst = 0x18, ClaimsShiftLast = 0x3D;
 
         /// <summary>The opcodes the 0.522 client registers (FUN_143a4a330).</summary>
         private static readonly HashSet<int> Registered = new()
@@ -91,6 +95,8 @@ namespace LandmarkEmulator.Gateway.Network
                 log.Warn($"0.522: dropped a client packet with an unknown opcode: {Show(data)}");
                 return null;
             }
+            if (opcode == Claims)
+                return data.Length >= 3 && data[2] is >= ClaimsShiftFirst and <= ClaimsShiftLast ? WithSub(data, (byte)(data[2] + 1)) : data;
             if (opcode != PlayerUpdate)
                 return data;
             if (data.Length < 3)
@@ -114,6 +120,8 @@ namespace LandmarkEmulator.Gateway.Network
                 log.Warn($"0.522: dropped a server packet with an opcode the client doesn't have: {Show(data)}");
                 return null;
             }
+            if (opcode == Claims)
+                return data.Length >= 3 && data[2] is > ClaimsShiftFirst and <= ClaimsShiftLast + 1 ? WithSub(data, (byte)(data[2] - 1)) : data;
             if (opcode != PlayerUpdate)
                 return data;
             if (data.Length < 6)
@@ -125,6 +133,13 @@ namespace LandmarkEmulator.Gateway.Network
             converted[1] = data[1];
             converted[2] = PlayerUpdateSubsOut.TryGetValue(data[2], out byte sub) ? sub : data[2];
             Array.Copy(data, 6, converted, 3, data.Length - 6);
+            return converted;
+        }
+
+        private static byte[] WithSub(byte[] data, byte sub)
+        {
+            var converted = (byte[])data.Clone();
+            converted[2] = sub;
             return converted;
         }
 

@@ -21,7 +21,7 @@ namespace LandmarkEmulator.Tests.Packets
         [Theory]
         [InlineData("63 00 01 02 03 04")]   // KeepAlive
         [InlineData("13 01 05")]            // WarpNetworkBase, above 0xFF
-        [InlineData("F9 00 1B")]            // ClaimsBase
+        [InlineData("F9 00 04")]            // ClaimsBase below the renumbered subs
         public void RegisteredOpcodes_PassUnchanged(string hex)
         {
             byte[] data = Wire.Hex(hex);
@@ -61,6 +61,20 @@ namespace LandmarkEmulator.Tests.Packets
             Assert.Equal(Wire.Hex("26 00 57 AA"), translator.Outbound(Channel.Zone, Wire.Hex("26 00 58 00 00 00 AA")));
             Assert.Equal(Wire.Hex("26 00 58 00 00 00 AA"), translator.Inbound(Channel.Zone, Wire.Hex("26 00 57 AA")));
         }
+
+        [Fact]
+        public void Claims_RenumberedSubs_GoBothWays()
+        {
+            Assert.Equal(Wire.Hex("F9 00 1C"), translator.Inbound(Channel.Zone, Wire.Hex("F9 00 1B")));     // ClaimManagmentRequest
+            Assert.Equal(Wire.Hex("F9 00 3E AA"), translator.Inbound(Channel.Zone, Wire.Hex("F9 00 3D AA")));
+            Assert.Equal(Wire.Hex("F9 00 2F AA"), translator.Outbound(Channel.Zone, Wire.Hex("F9 00 30 AA"))); // DeleteClaimItemReply
+        }
+
+        [Theory]
+        [InlineData("F9 00 16")]
+        [InlineData("F9 00 3F")]
+        public void Claims_OtherSubs_AreKept(string hex)
+            => Assert.Equal(Wire.Hex(hex), translator.Outbound(Channel.Zone, Wire.Hex(hex)));
 
         [Fact]
         public void PlayerUpdate_TooShort_IsDropped()
