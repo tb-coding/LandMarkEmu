@@ -49,7 +49,7 @@ namespace LandmarkEmulator.Tests.Packets
 
         [Fact]
         public void PlayerUpdate_InboundSubBecomesU32()
-            => Assert.Equal(Wire.Hex("26 00 70 00 00 00 AA BB"), translator.Inbound(Channel.Zone, Wire.Hex("26 00 70 AA BB")));
+            => Assert.Equal(Wire.Hex("26 00 01 00 00 00 AA BB"), translator.Inbound(Channel.Zone, Wire.Hex("26 00 01 AA BB")));
 
         [Fact]
         public void PlayerUpdate_OutboundSubBecomesU8()
@@ -75,6 +75,18 @@ namespace LandmarkEmulator.Tests.Packets
         [InlineData("F9 00 3F")]
         public void Claims_OtherSubs_AreKept(string hex)
             => Assert.Equal(Wire.Hex(hex), translator.Outbound(Channel.Zone, Wire.Hex(hex)));
+
+        [Fact]
+        public void PlayerUpdate_SubsAfterTheNewOne_GoBothWays()
+        {
+            Assert.Equal(Wire.Hex("26 00 0D 00 00 00"), translator.Inbound(Channel.Zone, Wire.Hex("26 00 0C")));    // SetLookAt
+            Assert.Equal(Wire.Hex("26 00 0C"), translator.Outbound(Channel.Zone, Wire.Hex("26 00 0D 00 00 00")));
+            Assert.Equal(Wire.Hex("26 00 0B"), translator.Outbound(Channel.Zone, Wire.Hex("26 00 0B 00 00 00")));
+        }
+
+        [Fact]
+        public void PlayerUpdate_SubTheClientLacks_IsDropped()
+            => Assert.Null(translator.Outbound(Channel.Zone, Wire.Hex("26 00 0C 00 00 00")));
 
         [Fact]
         public void PlayerUpdate_TooShort_IsDropped()
