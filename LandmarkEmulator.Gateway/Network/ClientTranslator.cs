@@ -31,8 +31,8 @@ namespace LandmarkEmulator.Gateway.Network
     /// <summary>
     /// The 0.522 client. Every base opcode both clients register has the same number, so bases are not translated; opcodes
     /// the client doesn't register are dropped both ways (a packet it can't name is no use to it, and one from it can't be
-    /// trusted to mean the same thing here). PlayerUpdate 0x26 has a u8 sub in 0.522 and a u32 sub in 0.695, and some
-    /// subs have other numbers (<see cref="PlayerUpdateSubs"/>). Claims 0xF9 subs from 0x18 on are one lower in 0.522. The
+    /// trusted to mean the same thing here). PlayerUpdate 0x26 has a u8 sub in 0.522 and a u32 sub in 0.695, and from
+    /// <see cref="PlayerUpdateNew"/> on 0.522's subs are one lower. Claims 0xF9 subs from 0x18 on are one lower in 0.522. The
     /// position channel has no opcode and passes unchanged.
     /// Bodies are not converted: packets whose layout changed between the clients still need their own step.
     /// </summary>
@@ -68,21 +68,11 @@ namespace LandmarkEmulator.Gateway.Network
             0x115, 0x116, 0x117,
         };
 
-        /// <summary>PlayerUpdate subs numbered differently: 0.522 to 0.695.</summary>
-        private static readonly Dictionary<byte, byte> PlayerUpdateSubs = new()
-        {
-            [0x57] = 0x58,  // AddLightweightPc
-        };
-
-        private static readonly Dictionary<byte, byte> PlayerUpdateSubsOut = Invert(PlayerUpdateSubs);
-
-        private static Dictionary<byte, byte> Invert(Dictionary<byte, byte> table)
-        {
-            var inverted = new Dictionary<byte, byte>();
-            foreach ((byte key, byte value) in table)
-                inverted[value] = key;
-            return inverted;
-        }
+        /// <summary>
+        /// The 0.695 PlayerUpdate sub 0.522 doesn't have (StopCompositeEffect). The subs after it are one lower in 0.522:
+        /// checked by name from 0xD to 0x76 against the client's vtable constants.
+        /// </summary>
+        private const byte PlayerUpdateNew = 0x0C;
 
         private static int? OpcodeOf(byte[] data) => data.Length >= 2 ? data[0] | (data[1] << 8) : null;
 
@@ -106,7 +96,7 @@ namespace LandmarkEmulator.Gateway.Network
             var converted = new byte[data.Length + 3];
             converted[0] = data[0];
             converted[1] = data[1];
-            converted[2] = PlayerUpdateSubs.TryGetValue(data[2], out byte sub) ? sub : data[2];
+            converted[2] = data[2] >= PlayerUpdateNew ? (byte)(data[2] + 1) : data[2];
             Array.Copy(data, 3, converted, 6, data.Length - 3);
             return converted;
         }
@@ -126,12 +116,17 @@ namespace LandmarkEmulator.Gateway.Network
                 return data;
             if (data.Length < 6)
                 return null;
+            if (data[2] == PlayerUpdateNew)
+            {
+                log.Warn("0.522: dropped PlayerUpdate sub 0x0C, the client doesn't have it.");
+                return null;
+            }
 
             // 26 00 ss 00 00 00 body -> 26 00 ss body
             var converted = new byte[data.Length - 3];
             converted[0] = data[0];
             converted[1] = data[1];
-            converted[2] = PlayerUpdateSubsOut.TryGetValue(data[2], out byte sub) ? sub : data[2];
+            converted[2] = data[2] > PlayerUpdateNew ? (byte)(data[2] - 1) : data[2];
             Array.Copy(data, 6, converted, 3, data.Length - 6);
             return converted;
         }
