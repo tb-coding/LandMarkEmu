@@ -202,6 +202,7 @@ services:
       # A client silent this long (crash, killed process, lost network) is disconnected and leaves the world (seconds;
       # 60 = two of the client's 29 s SOE keep-alives; 0 = never). The gateway container reads the same line.
       ClientTimeoutSeconds: ${CLIENT_TIMEOUT_SECONDS:-60}
+      AllowedClientBuilds: ${ALLOWED_CLIENT_BUILDS:-}
       # The shared social service ("social:20200" with the compose profile "social"); empty = this world keeps its own
       # presence / friends / ignore lists, as before (docker/social).
       SocialAddress: ${SOCIAL_ADDRESS:-}

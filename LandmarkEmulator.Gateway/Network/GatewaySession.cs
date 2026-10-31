@@ -279,21 +279,14 @@ namespace LandmarkEmulator.Gateway.Network
             ToggleEncryption(true);
 
             ClientBuild = request.ClientBuild;
-            if (Enum.TryParse(request.ClientProtocol, out ClientProtocol protocol))
-                ClientProtocol = protocol;
-            else
+            (ClientProtocol served, string refusal) = ClientBuilds.Admit(request.ClientProtocol, request.ClientBuild);
+            if (refusal != null)
             {
-                log.Error($"Unsupported Client Protocol: {request.ClientProtocol}. Disconnecting.");
+                log.Error($"{refusal} Disconnecting.");
                 OnDisconnect();
                 return;
             }
-            if (ClientBuilds.Is589(ClientBuild))
-            {
-                // The server speaks the 0.695 numbering only (ClientBuilds; docs/protocol.md §1.6).
-                log.Error($"Client build {ClientBuild} is not served here (0.695 only). Disconnecting.");
-                OnDisconnect();
-                return;
-            }
+            ClientProtocol = served;
 
             LoginTicket = request.ServerTicket ?? "";
             CheckLogin(request.ServerTicket, request.CharacterId, (account, character) =>

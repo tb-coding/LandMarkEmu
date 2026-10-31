@@ -34,6 +34,8 @@ services:
       # a killed process, a lost network); the same .env line as the world's. Silence from the zone side (the hold above)
       # doesn't count: the client keeps sending to the gateway meanwhile.
       ClientTimeoutSeconds: ${CLIENT_TIMEOUT_SECONDS:-60}
+      # Client builds admitted with a protocol the server doesn't speak natively; the same .env line as the world's.
+      AllowedClientBuilds: ${ALLOWED_CLIENT_BUILDS:-}
       # The world it serves: the routing table is keyed by (world, channel) and back ends registering for another world
       # (RegisterBackEnd world id = the zone's ZoneServerId / the world channel's WorldId) are not routed.
       WorldId: ${WORLD_ID:-1}
