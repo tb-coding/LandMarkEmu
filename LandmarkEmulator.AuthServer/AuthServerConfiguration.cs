@@ -49,6 +49,13 @@ namespace LandmarkEmulator.AuthServer
         public bool CharacterSelectFriends { get; set; } = true;
 
         /// <summary>
+        /// LoginUdp_9 connections are the 0.522 client: the character list in the LoginUdp_10 layout, one character per
+        /// server, and server 0 at Play means the character's own. Off: the older client's form. Docker:
+        /// LOGIN_UDP9_CLIENT_522.
+        /// </summary>
+        public bool LoginUdp9Client522 { get; set; }
+
+        /// <summary>
         /// "host:port" of the shared social service (the worlds' SOCIAL_ADDRESS, e.g. social:20200): the friends lists and
         /// who is online come from it. Empty: the lists come from lmemu_character with every friend offline (each world
         /// keeps its own presence then).
