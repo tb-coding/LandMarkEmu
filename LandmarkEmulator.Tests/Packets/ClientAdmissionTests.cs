@@ -52,6 +52,17 @@ namespace LandmarkEmulator.Tests.Packets
         }
 
         [Fact]
+        public void TranslatorFor_OnlyAnAllowed522BuildIsConverted()
+        {
+            ClientBuilds.Allow("");
+            Assert.IsType<PassThroughTranslator>(ClientBuilds.TranslatorFor("0.522.3.116271"));
+            ClientBuilds.Allow("0.522.3.116271");
+            Assert.IsType<Client522Translator>(ClientBuilds.TranslatorFor("0.522.3.116271"));
+            Assert.IsType<PassThroughTranslator>(ClientBuilds.TranslatorFor("0.695.1.132647"));
+            ClientBuilds.Allow("");
+        }
+
+        [Fact]
         public void UnknownProtocol_IsRefused()
             => Assert.NotNull(ClientBuilds.Admit("LandmarkClientProtocol_1", Build522).Refusal);
 
