@@ -16,6 +16,11 @@ namespace LandmarkEmulator.Shared.GameTable
         public int RecordCount => entries.Count;
         /// <summary>The highest id (the .txt files aren't sorted by id, so not the last row's).</summary>
         public ulong MaxId => entries.Count == 0 ? 0 : entries.Keys.Max();
+        /// <summary>
+        /// What did not fit the model when the table was read (older client builds have fewer columns, and blanks in numeric
+        /// columns); null when everything fit. The rows are kept with the model's default in those fields.
+        /// </summary>
+        public string LoadWarning { get; private set; }
 
         private Dictionary<ulong, T> entries = new();
 
@@ -50,16 +55,23 @@ namespace LandmarkEmulator.Shared.GameTable
 
             using (StreamReader reader = File.OpenText(path))
             {
-                ReadEntries(reader);   
+                ReadEntries(reader, Path.GetFileName(path));
             }
         }
 
         /// <summary>
         /// Reads the entries from the file provided as a <see cref="StreamReader"/>.
         /// </summary>
-        private void ReadEntries(StreamReader reader)
+        private void ReadEntries(StreamReader reader, string tableName)
         {
             PropertyInfo[] typeFields = typeof(T).GetProperties();
+
+            // Per field, how many rows had nothing for it, a blank number or a value that would not parse.
+            var missing = new Dictionary<string, int>();
+            var blank = new Dictionary<string, int>();
+            var bad = new Dictionary<string, int>();
+            string[] header = Array.Empty<string>();
+            int columns = 0;
 
             uint recordCount = 0;
             string line = String.Empty;
@@ -68,9 +80,15 @@ namespace LandmarkEmulator.Shared.GameTable
                 // Skip header
                 if (recordCount == 0)
                 {
+                    header = Regex.Split(line, @"\^");
+                    // Each line ends in the separator: the last piece is not a column.
+                    columns = header[^1].Length == 0 ? header.Length - 1 : header.Length;
                     recordCount++;
                     continue;
                 }
+
+                if (String.IsNullOrWhiteSpace(line))
+                    continue;
 
                 // Initiailise new entry for GameTable
                 var entry = new T();
@@ -80,9 +98,24 @@ namespace LandmarkEmulator.Shared.GameTable
                 for (int i = 0; i < typeFields.Length; i++)
                 {
                     PropertyInfo modelField = typeFields[i];
+                    TypeCode typeCode = Type.GetTypeCode(modelField.PropertyType);
+
+                    // A field this build's table has no column for keeps the model's default.
+                    if (i >= pieces.Length || (i >= columns && pieces[i].Length == 0))
+                    {
+                        Count(missing, modelField.Name);
+                        continue;
+                    }
+
+                    if (pieces[i].Length == 0 && typeCode != TypeCode.String)
+                    {
+                        Count(blank, modelField.Name);
+                        continue;
+                    }
+
                     try
                     {
-                        switch (Type.GetTypeCode(modelField.PropertyType))
+                        switch (typeCode)
                         {
                             case TypeCode.Boolean:
                                 modelField.SetValue(entry, Convert.ToBoolean(Byte.Parse(pieces[i], Invariant)));
@@ -123,6 +156,10 @@ namespace LandmarkEmulator.Shared.GameTable
                                 break;
                         }
                     }
+                    catch (Exception ex) when (ex is FormatException or OverflowException)
+                    {
+                        Count(bad, modelField.Name);
+                    }
                     catch (Exception ex)
                     {
                         log.Error($"{modelField.Name} errored with value {pieces[i]}: {ex.Message}");
@@ -136,6 +173,44 @@ namespace LandmarkEmulator.Shared.GameTable
 
                 recordCount++;
             }
+
+            LoadWarning = Describe(tableName, typeFields, header, columns, missing, blank, bad);
+            if (LoadWarning != null)
+                log.Warn(LoadWarning);
+        }
+
+        private static void Count(Dictionary<string, int> counts, string field)
+        {
+            counts[field] = counts.GetValueOrDefault(field) + 1;
+        }
+
+        /// <summary>
+        /// One line for the whole table, or null when it fit. Columns named differently from the model are only listed then:
+        /// the names alone say nothing (the rows are read by position), but next to gaps they show where the two part ways.
+        /// </summary>
+        private static string Describe(string tableName, PropertyInfo[] typeFields, string[] header, int columns,
+            Dictionary<string, int> missing, Dictionary<string, int> blank, Dictionary<string, int> bad)
+        {
+            if (missing.Count == 0 && blank.Count == 0 && bad.Count == 0)
+                return null;
+
+            static string Join(Dictionary<string, int> counts) => String.Join(", ", counts.Select(c => $"{c.Key} ({c.Value})"));
+            static string Plain(string name) => new string(name.Where(Char.IsLetterOrDigit).ToArray()).ToLowerInvariant();
+
+            var parts = new List<string>();
+            if (missing.Count > 0)
+                parts.Add($"no column for: {Join(missing)}");
+            if (blank.Count > 0)
+                parts.Add($"blank numbers: {Join(blank)}");
+            if (bad.Count > 0)
+                parts.Add($"unreadable values: {Join(bad)}");
+
+            string[] renamed = typeFields.Take(columns).Select((f, i) => (Field: f.Name, Column: header[i]))
+                .Where(c => Plain(c.Field) != Plain(c.Column)).Select(c => $"{c.Field} <- {c.Column}").ToArray();
+            if (renamed.Length > 0)
+                parts.Add($"named differently: {String.Join(", ", renamed)}");
+
+            return $"{tableName}: read with the model's defaults (rows affected in brackets); {String.Join("; ", parts)}.";
         }
 
         /// <summary>
