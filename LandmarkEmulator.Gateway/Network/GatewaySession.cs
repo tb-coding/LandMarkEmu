@@ -30,6 +30,8 @@ namespace LandmarkEmulator.Gateway.Network
 
         public ClientProtocol ClientProtocol { get; private set; }
         public string ClientBuild { get; private set; }
+        /// <summary>Converts this connection's packets to and from the server's numbering, chosen at the login.</summary>
+        private IClientTranslator translator = PassThroughTranslator.Instance;
 
         public GatewaySession(string cryptoKey) : base(cryptoKey, subPacketAcks: true)
         {
@@ -76,7 +78,8 @@ namespace LandmarkEmulator.Gateway.Network
             {
                 log.Trace($"Received Gateway packet {packet.Opcode}(0x{packet.Opcode:X}) | Channel: {packet.Channel} | {BitConverter.ToString(packet.Data)}");
                 Profile(false, packet.Data);
-                OnTunnelData(packet.Channel, packet.Data);
+                if (translator.Inbound(packet.Channel, packet.Data) is byte[] inbound)
+                    OnTunnelData(packet.Channel, inbound);
                 return;
             }
 
@@ -287,6 +290,7 @@ namespace LandmarkEmulator.Gateway.Network
                 return;
             }
             ClientProtocol = served;
+            translator = ClientBuilds.TranslatorFor(ClientBuild);
 
             LoginTicket = request.ServerTicket ?? "";
             CheckLogin(request.ServerTicket, request.CharacterId, (account, character) =>
@@ -369,6 +373,9 @@ namespace LandmarkEmulator.Gateway.Network
         protected void PackTunnelPacket(byte[] data, Channel channel = Channel.Zone)
         {
             Profile(true, data);
+            data = translator.Outbound(channel, data);
+            if (data == null)
+                return;
             EnqueueGatewayMessage(new TunnelPacketToExternalConnection
             {
                 Data = data

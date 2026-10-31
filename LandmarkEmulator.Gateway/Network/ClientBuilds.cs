@@ -33,6 +33,11 @@ namespace LandmarkEmulator.Gateway.Network
         public static void Allow(string builds)
             => Allowed = (builds ?? "").Split(new[] { ',', ' ', ';' }, StringSplitOptions.RemoveEmptyEntries).ToHashSet();
 
+        /// <summary>The converter for a build (the 0.695 client needs none).</summary>
+        public static IClientTranslator TranslatorFor(string clientBuild)
+            => clientBuild != null && clientBuild.StartsWith("0.522.") && Allowed.Contains(clientBuild)
+                ? new Client522Translator() : PassThroughTranslator.Instance;
+
         /// <summary>
         /// The login's check of what the client says it is. <c>Served</c> is the protocol the zone handles the connection
         /// with, <c>Refusal</c> the reason it is turned away (null when it is admitted).
