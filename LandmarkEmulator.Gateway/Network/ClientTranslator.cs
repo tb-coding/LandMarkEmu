@@ -43,7 +43,8 @@ namespace LandmarkEmulator.Gateway.Network
         private static readonly ILogger log = LogManager.GetCurrentClassLogger();
 
         private const byte PlayerUpdate = 0x26;
-        private const byte SendSelf = 0x0F, ZoneDetails = 0x2E, ReferenceData = 0x2F;
+        private const byte SendSelf = 0x0F, CommandBase = 0x1E, ZoneDetails = 0x2E, ReferenceData = 0x2F;
+        private const byte ItemDefinitionsSub = 0x4B;
         private const byte Claims = 0xF9;
         private const byte ProfileDefinitionsSub = 3;
         /// <summary>The 0.522 Claims subs one lower than 0.695's (vtable constants: 0x18 to SetSupplementalData 0x3D).</summary>
@@ -84,7 +85,7 @@ namespace LandmarkEmulator.Gateway.Network
         /// </summary>
         private static readonly HashSet<int> Converted = new()
         {
-            0x03, 0x0F, 0x11, 0x12, 0x13, 0x26, 0x29, 0x2E, 0x2F, 0x37, 0xC3, 0xEA, 0xEC, 0xF9, 0x116,
+            0x03, 0x0F, 0x11, 0x12, 0x13, 0x1E, 0x26, 0x29, 0x2E, 0x2F, 0x37, 0xC3, 0xEA, 0xEC, 0xF9, 0x116,
         };
 
         /// <summary>Held-back opcodes, each logged once per connection.</summary>
@@ -136,6 +137,14 @@ namespace LandmarkEmulator.Gateway.Network
                 return data.Length >= 3 && data[2] is > ClaimsShiftFirst and <= ClaimsShiftLast + 1 ? WithSub(data, (byte)(data[2] - 1)) : data;
             if (opcode == SendSelf)
                 return SendSelfConverter.Convert(data);
+            if (opcode == CommandBase)
+            {
+                if (data.Length > 8 && data[2] == ItemDefinitionsSub && data[3] == 0)
+                    return ItemDefinitionConverter.Convert(data);
+                if (data.Length > 2 && heldBack.Add(data[2] | CommandBase << 8))
+                    log.Info($"0.522: holding back CommandBase sub 0x{data[2]:X}: {Show(data)}");
+                return null;
+            }
             if (opcode == ZoneDetails)
                 return TrimZoneDetails(data);
             if (opcode == ReferenceData)

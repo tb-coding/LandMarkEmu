@@ -144,7 +144,7 @@ namespace LandmarkEmulator.Gateway.Network.Client522
         /// <summary>
         /// Same layout as <see cref="SendSelf522Data.InventoryData"/>, items in the 0.522 layout (cloud batch 9 L3).
         /// </summary>
-        public SendSelf522Data.InventoryData Inventory { get; set; } = new();
+        public InventoryData694 Inventory { get; set; } = new();
         public Gender GenderMaybe { get; set; }
         public SendSelf522Data.QuestData Quests { get; set; } = new();
         public List<uint> Unknown40 { get; set; } = new();
