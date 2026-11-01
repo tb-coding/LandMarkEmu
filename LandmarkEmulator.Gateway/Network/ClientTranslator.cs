@@ -46,6 +46,8 @@ namespace LandmarkEmulator.Gateway.Network
         private const byte SendSelf = 0x0F, CommandBase = 0x1E, ZoneDetails = 0x2E, ReferenceData = 0x2F;
         private const byte ItemDefinitionsSub = 0x4B, InteractionClaimSub = 0x4D;
         private const byte Claims = 0xF9;
+        private const byte ClientUpdate = 0x29, ItemUpdateSub = 3;
+        private const byte Equipment = 0xCB, EquipmentSetSlotSub = 2, EquipmentUnsetSlotSub = 3;
         private const byte ProfileDefinitionsSub = 3;
         /// <summary>The 0.522 Claims subs one lower than 0.695's (vtable constants: 0x18 to SetSupplementalData 0x3D).</summary>
         private const byte ClaimsShiftFirst = 0x18, ClaimsShiftLast = 0x3D;
@@ -85,7 +87,7 @@ namespace LandmarkEmulator.Gateway.Network
         /// </summary>
         private static readonly HashSet<int> Converted = new()
         {
-            0x03, 0x0F, 0x11, 0x12, 0x13, 0x1E, 0x26, 0x29, 0x2E, 0x2F, 0x37, 0x9A, 0xC3, 0xEA, 0xEC, 0xF9, 0x116,
+            0x03, 0x0F, 0x11, 0x12, 0x13, 0x1E, 0x26, 0x29, 0x2E, 0x2F, 0x37, 0x9A, 0xC3, 0xCB, 0xEA, 0xEC, 0xF9, 0x116,
         };
 
         /// <summary>Held-back opcodes, each logged once per connection.</summary>
@@ -157,6 +159,16 @@ namespace LandmarkEmulator.Gateway.Network
                     return data;
                 if (data.Length > 2 && heldBack.Add(data[2] | CommandBase << 8))
                     log.Info($"0.522: holding back CommandBase sub 0x{data[2]:X}: {Show(data)}");
+                return null;
+            }
+            if (opcode == ClientUpdate && data.Length >= 4 && data[2] == ItemUpdateSub && data[3] == 0)
+                return ItemUpdateConverter.Convert(data);
+            if (opcode == Equipment)
+            {
+                if (data.Length > 2 && data[2] is EquipmentSetSlotSub or EquipmentUnsetSlotSub)
+                    return data;
+                if (data.Length > 2 && heldBack.Add(data[2] | Equipment << 8))
+                    log.Info($"0.522: holding back EquipmentBase sub 0x{data[2]:X}: {Show(data)}");
                 return null;
             }
             if (opcode == ZoneDetails)
