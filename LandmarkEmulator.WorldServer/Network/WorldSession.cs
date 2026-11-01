@@ -625,6 +625,9 @@ namespace LandmarkEmulator.WorldServer.Network
         private void Login522(CharacterModel model)
         {
             EnqueueMessage(ZoneMessageOpcode.SendZoneDetails, ZoneDetails522(Game.Landscapes.ZoneDetails(model.ZoneId)));
+            // Before SendSelf: the client tints the player when it builds the model and doesn't do it again, so the
+            // ClientIsReady copy comes too late for this body.
+            EnqueueMessage(ZoneMessageOpcode.ArtDataTintDefinitionManagerData, Game.ArtTints.Body);
             EnqueueMessage(ZoneMessageOpcode.ReferenceDataProfileDefinitions, new byte[4]);
             BuildSendToSelfPacket(send: false);
             EnqueueMessage(BuildSendSelf522(model));
