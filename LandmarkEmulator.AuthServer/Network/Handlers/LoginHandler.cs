@@ -40,6 +40,15 @@ namespace LandmarkEmulator.AuthServer.Network.Handlers
                 if (account != null)
                     loggedIn = true;
 
+                // Without the tint lists every tint id is "not found in list": grey bodies whatever the character's skin.
+                if (Is522(session))
+                    session.EnqueueMessage(new TunnelPacketServerToClient
+                    {
+                        ServerId = 0,
+                        Type = TunnelDataType.ArtData,
+                        Data = AuthAssetManager.Instance.ArtData
+                    });
+
                 session.EnqueueMessage(new LoginReply_9
                 {
                     LoggedIn = loggedIn,
