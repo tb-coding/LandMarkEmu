@@ -143,9 +143,9 @@ namespace LandmarkEmulator.Tests.Packets
                 w.Write(0ul);
                 w.Write("");
                 w.Write(0u);
+                w.Write(0u);
                 w.Write(1u);
                 w.Write(406u);
-                w.Write(0u);
             }));
             Assert.Equal(expected, ClaimConverter.Convert(packet));
         }
