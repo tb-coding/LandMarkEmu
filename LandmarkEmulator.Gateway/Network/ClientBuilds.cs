@@ -17,8 +17,8 @@ namespace LandmarkEmulator.Gateway.Network
     /// both; 0.589 is served by the frozen client-0.589 branch.
     /// <para>
     /// The 0.522 client sends LandmarkClientProtocol_694, which the login refused as an unknown protocol.
-    /// <see cref="Allowed"/> (ALLOWED_CLIENT_BUILDS, empty by default) lets an operator admit such a build. The WebApi's
-    /// RequiredClientBuild is no part of this: only the launcher reads it, from /info.
+    /// <see cref="Allowed"/> lists the builds admitted that way. The WebApi's RequiredClientBuild is no part of this: only
+    /// the launcher reads it, from /info.
     /// </para>
     /// </remarks>
     public static class ClientBuilds
@@ -30,7 +30,7 @@ namespace LandmarkEmulator.Gateway.Network
         public static bool Is522(string clientBuild) => clientBuild?.StartsWith("0.522.") ?? false;
 
         /// <summary>The builds admitted with a protocol the server doesn't speak natively (<see cref="Admit"/>).</summary>
-        public static IReadOnlySet<string> Allowed { get; private set; } = new HashSet<string>();
+        public static IReadOnlySet<string> Allowed { get; private set; } = new HashSet<string> { "0.522.3.116271" };
 
         /// <summary>Sets <see cref="Allowed"/> from a comma or space separated list.</summary>
         public static void Allow(string builds)

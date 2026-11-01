@@ -10,7 +10,6 @@
   "WorldId": 1,
   "MultiWorld": "auto",
   "HoldSeconds": 120,
-  "AllowedClientBuilds": "",
   "ClientTimeoutSeconds": 60,
   "LoginInternalAddress": "",
   "EncryptionKey": "F70IaxuU8C/w7FPXY1ibXw==",

@@ -641,12 +641,6 @@ namespace LandmarkEmulator.WorldServer
         /// the gateway container's value counts (the same .env line). Docker: CLIENT_TIMEOUT_SECONDS.
         /// </summary>
         public double ClientTimeoutSeconds { get; set; } = Shared.Network.SocketHeartbeat.DefaultClientTimeoutSeconds;
-        /// <summary>
-        /// Client builds this world's in-process gateway admits with a protocol the server doesn't speak natively
-        /// (ClientBuilds.Admit), comma separated, e.g. "0.522.3.116271". Empty: none. With a separate gateway its own copy
-        /// counts (the same .env line). Docker: ALLOWED_CLIENT_BUILDS.
-        /// </summary>
-        public string AllowedClientBuilds { get; set; } = "";
         /// <summary>The message shown with the restart warnings (ours: live's wording is not in the archive). Docker: RESTART_MESSAGE.</summary>
         public string RestartMessage { get; set; } = "Scheduled server restart.";
 

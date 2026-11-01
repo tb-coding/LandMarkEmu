@@ -82,7 +82,6 @@ namespace LandmarkEmulator.WorldServer
             // A client silent this long (a crash, a killed process, a lost network) is disconnected and leaves the world
             // (the in-process gateway; a separate gateway applies its own copy of the setting).
             SocketHeartbeat.DefaultTimeoutSeconds = worldConfig.ClientTimeoutSeconds;
-            Gateway.Network.ClientBuilds.Allow(worldConfig.AllowedClientBuilds);
             Game.RestartSchedule.Configure(worldConfig.RestartSchedule, worldConfig.RestartTimeZone,
                 worldConfig.RestartWarningSeconds, worldConfig.RestartMessage);
             Game.Terrain.TerrainMaterials.Load(worldConfig.GameDirectory, worldConfig.Continent,

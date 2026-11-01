@@ -7,7 +7,7 @@ using LandmarkEmulator.Shared.Network.Message.Model.Shared;
 using System.Collections.Generic;
 using System.Numerics;
 
-namespace LandmarkEmulator.WorldServer.Network.Message.Model
+namespace LandmarkEmulator.Gateway.Network.Client522
 {
     /// <summary>
     /// SendSelfToClient layout for <see cref="ClientProtocol.LandmarkClientProtocol_694"/> (0.522.3.116271 client).
@@ -18,7 +18,6 @@ namespace LandmarkEmulator.WorldServer.Network.Message.Model
     /// Lists whose element layout has not been worked out yet are always sent empty.
     /// The client rejects the packet when any bytes are left unread, so nothing may be appended after the last field.
     /// </remarks>
-    [ZoneMessage(ZoneMessageOpcode.SendSelfToClient, ClientProtocol.LandmarkClientProtocol_694, prependSize: true)]
     public class SendSelfToClient694 : IWritable
     {
         // FUN_143251fd0, same as SendSelf522Data.Profile but with 14 trailing uints instead of 15.

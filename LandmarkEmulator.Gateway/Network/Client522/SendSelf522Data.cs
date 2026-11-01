@@ -3,14 +3,13 @@ using LandmarkEmulator.Shared.Game.Entity.Static;
 using LandmarkEmulator.Shared.Network;
 using LandmarkEmulator.Shared.Network.Message;
 using LandmarkEmulator.Shared.Network.Message.Model.Shared;
-using LandmarkEmulator.WorldServer.Network.Message.Model.Shared;
 using NLog;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 
-namespace LandmarkEmulator.WorldServer.Network.Message.Model
+namespace LandmarkEmulator.Gateway.Network.Client522
 {
     public class SendSelf522Data : IReadable, IWritable
     {
