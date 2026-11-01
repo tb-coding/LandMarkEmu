@@ -28,9 +28,11 @@ build: pull ## git pull + 重建並啟動(可指定服務),等服務起來後列
 	$(DC) up -d --build $(SVC)
 	@$(MAKE) --no-print-directory wait TARGETS="$(TARGETS)"
 	@$(DC) ps
+	@echo "commit: $$(git log --oneline -1) [$$(git rev-parse --abbrev-ref HEAD)]"
 
-pull: ## git pull(只接受 fast-forward)
+pull: ## git pull(只接受 fast-forward),並顯示目前 commit
 	git pull --ff-only
+	@echo "commit: $$(git log --oneline -1) [$$(git rev-parse --abbrev-ref HEAD)]"
 
 ##@ 服務
 
