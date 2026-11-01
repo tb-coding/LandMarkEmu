@@ -74,6 +74,18 @@ namespace LandmarkEmulator.Gateway.Network
         /// </summary>
         private const byte PlayerUpdateNew = 0x0C;
 
+        /// <summary>
+        /// What the zone may send the client for now: the packets the 0.522 login needs. Everything else has a body laid
+        /// out for 0.695 and reads wrong or crashes the client, so it stays back until it is converted.
+        /// </summary>
+        private static readonly HashSet<int> Converted = new()
+        {
+            0x03, 0x0F, 0x11, 0x12, 0x13, 0x26, 0x29, 0x2E, 0x2F, 0x37, 0xC3, 0xEA, 0xEC, 0xF9,
+        };
+
+        /// <summary>Held-back opcodes, each logged once per connection.</summary>
+        private readonly HashSet<int> heldBack = new();
+
         private static int? OpcodeOf(byte[] data) => data.Length >= 2 ? data[0] | (data[1] << 8) : null;
 
         public byte[] Inbound(Channel channel, byte[] data)
@@ -108,6 +120,12 @@ namespace LandmarkEmulator.Gateway.Network
             if (OpcodeOf(data) is not int opcode || !Registered.Contains(opcode))
             {
                 log.Warn($"0.522: dropped a server packet with an opcode the client doesn't have: {Show(data)}");
+                return null;
+            }
+            if (!Converted.Contains(opcode))
+            {
+                if (heldBack.Add(opcode))
+                    log.Info($"0.522: holding back opcode 0x{opcode:X}: {Show(data)}");
                 return null;
             }
             if (opcode == Claims)

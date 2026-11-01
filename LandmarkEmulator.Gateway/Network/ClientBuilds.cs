@@ -26,6 +26,9 @@ namespace LandmarkEmulator.Gateway.Network
         /// <summary>The 0.589 (Steam) client, which this server does not serve.</summary>
         public static bool Is589(string clientBuild) => clientBuild?.StartsWith("0.589.") ?? false;
 
+        /// <summary>The 0.522 client: the zone gives it its own login packets (WorldSession.Login522).</summary>
+        public static bool Is522(string clientBuild) => clientBuild?.StartsWith("0.522.") ?? false;
+
         /// <summary>The builds admitted with a protocol the server doesn't speak natively (<see cref="Admit"/>).</summary>
         public static IReadOnlySet<string> Allowed { get; private set; } = new HashSet<string>();
 
@@ -35,7 +38,7 @@ namespace LandmarkEmulator.Gateway.Network
 
         /// <summary>The converter for a build (the 0.695 client needs none).</summary>
         public static IClientTranslator TranslatorFor(string clientBuild)
-            => clientBuild != null && clientBuild.StartsWith("0.522.") && Allowed.Contains(clientBuild)
+            => Is522(clientBuild) && Allowed.Contains(clientBuild)
                 ? new Client522Translator() : PassThroughTranslator.Instance;
 
         /// <summary>

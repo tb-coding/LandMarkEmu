@@ -19,8 +19,7 @@ namespace LandmarkEmulator.Tests.Packets
         }
 
         [Theory]
-        [InlineData("63 00 01 02 03 04")]   // KeepAlive
-        [InlineData("13 01 05")]            // WarpNetworkBase, above 0xFF
+        [InlineData("37 00 01 02 03 04")]   // GameTimeSync
         [InlineData("F9 00 04")]            // ClaimsBase below the renumbered subs
         public void RegisteredOpcodes_PassUnchanged(string hex)
         {
@@ -45,6 +44,14 @@ namespace LandmarkEmulator.Tests.Packets
             byte[] data = Wire.Hex("56 00 01");
             Assert.Same(data, translator.Inbound(Channel.PositionUpdate, data));
             Assert.Same(data, translator.Outbound(Channel.PositionUpdate, data));
+        }
+
+        [Fact]
+        public void ServerPackets_NotConvertedYet_AreHeldBack()
+        {
+            byte[] keepAlive = Wire.Hex("63 00 01");
+            Assert.Null(translator.Outbound(Channel.Zone, keepAlive));
+            Assert.Same(keepAlive, translator.Inbound(Channel.Zone, keepAlive));
         }
 
         [Fact]
