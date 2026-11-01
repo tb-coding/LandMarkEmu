@@ -64,8 +64,6 @@ services:
       # Each character in the character list carries its friends list, as on live (the client counts each world's online
       # friends from it). false = sent empty.
       CharacterSelectFriends: ${CHARACTER_SELECT_FRIENDS:-true}
-      # LoginUdp_9 connections are the 0.522 client (see .env.example).
-      LoginUdp9Client522: ${LOGIN_UDP9_CLIENT_522:-false}
       # The shared social service (docker/social, the worlds' SOCIAL_ADDRESS): those friends lists and who is online come
       # from it. Empty: from the character database, every friend shown offline.
       SocialAddress: ${SOCIAL_ADDRESS:-}

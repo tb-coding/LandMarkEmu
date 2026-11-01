@@ -75,8 +75,6 @@ namespace LandmarkEmulator.AuthServer.Network.Message.Model
     [AuthMessage(AuthMessageOpcode.CharacterCreateRequest, ProtocolVersion.LoginUdp_9)]
     public class CharacterCreateRequest9 : IReadable
     {
-        /// <summary>The 0.522 client adds three u32 at the end: unknown, race, gender again; older clients have none.</summary>
-        public Race Race { get; set; } = Race.Human;
         public ulong ServerId { get; set; }
         /// <summary>Byte count of the payload that follows [P], as in <see cref="CharacterCreateRequest"/>.</summary>
         public uint PayloadLength { get; set; }
@@ -107,13 +105,6 @@ namespace LandmarkEmulator.AuthServer.Network.Message.Model
             }
             
             SkinTint = reader.ReadUInt();
-
-            if (reader.BytesRemaining >= 12)
-            {
-                reader.ReadUInt();
-                Race = (Race)reader.ReadUInt();
-                reader.ReadUInt();
-            }
         }
     }
 }

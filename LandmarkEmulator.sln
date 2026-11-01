@@ -50,6 +50,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LandmarkEmulator.Tests", "L
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LandmarkEmulator.PatchPacks", "LandmarkEmulator.PatchPacks\LandmarkEmulator.PatchPacks.csproj", "{8AF5D7B6-7089-4653-A029-B8B9BB6E666A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LandmarkEmulator.LoginRelay522", "LandmarkEmulator.LoginRelay522\LandmarkEmulator.LoginRelay522.csproj", "{EB8BA59F-30AA-4DCF-94A2-9DB7A285646B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -300,6 +302,18 @@ Global
 		{8AF5D7B6-7089-4653-A029-B8B9BB6E666A}.Release|x64.Build.0 = Release|Any CPU
 		{8AF5D7B6-7089-4653-A029-B8B9BB6E666A}.Release|x86.ActiveCfg = Release|Any CPU
 		{8AF5D7B6-7089-4653-A029-B8B9BB6E666A}.Release|x86.Build.0 = Release|Any CPU
+		{EB8BA59F-30AA-4DCF-94A2-9DB7A285646B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EB8BA59F-30AA-4DCF-94A2-9DB7A285646B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EB8BA59F-30AA-4DCF-94A2-9DB7A285646B}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{EB8BA59F-30AA-4DCF-94A2-9DB7A285646B}.Debug|x64.Build.0 = Debug|Any CPU
+		{EB8BA59F-30AA-4DCF-94A2-9DB7A285646B}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{EB8BA59F-30AA-4DCF-94A2-9DB7A285646B}.Debug|x86.Build.0 = Debug|Any CPU
+		{EB8BA59F-30AA-4DCF-94A2-9DB7A285646B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EB8BA59F-30AA-4DCF-94A2-9DB7A285646B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EB8BA59F-30AA-4DCF-94A2-9DB7A285646B}.Release|x64.ActiveCfg = Release|Any CPU
+		{EB8BA59F-30AA-4DCF-94A2-9DB7A285646B}.Release|x64.Build.0 = Release|Any CPU
+		{EB8BA59F-30AA-4DCF-94A2-9DB7A285646B}.Release|x86.ActiveCfg = Release|Any CPU
+		{EB8BA59F-30AA-4DCF-94A2-9DB7A285646B}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

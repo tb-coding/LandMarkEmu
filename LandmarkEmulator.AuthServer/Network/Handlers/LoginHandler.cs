@@ -7,7 +7,6 @@ using LandmarkEmulator.AuthServer.Zone.Static;
 using LandmarkEmulator.Database.Auth.Model;
 using LandmarkEmulator.Database.Character;
 using LandmarkEmulator.Database.Character.Model;
-using LandmarkEmulator.Shared.Configuration;
 using LandmarkEmulator.Shared.Database;
 using LandmarkEmulator.Shared.Game;
 using LandmarkEmulator.Shared.Game.Entity.Static;
@@ -39,15 +38,6 @@ namespace LandmarkEmulator.AuthServer.Network.Handlers
                 bool loggedIn = false;
                 if (account != null)
                     loggedIn = true;
-
-                // Without the tint lists every tint id is "not found in list": grey bodies whatever the character's skin.
-                if (Is522(session))
-                    session.EnqueueMessage(new TunnelPacketServerToClient
-                    {
-                        ServerId = 0,
-                        Type = TunnelDataType.ArtData,
-                        Data = AuthAssetManager.Instance.ArtData
-                    });
 
                 session.EnqueueMessage(new LoginReply_9
                 {
@@ -139,35 +129,12 @@ namespace LandmarkEmulator.AuthServer.Network.Handlers
                     EquipSlot = look.EquipSlot,
                 }).ToList();
 
-        /// <summary>The connection is a 0.522 client (AuthServerConfiguration.LoginUdp9Client522).</summary>
-        private static bool Is522(AuthSession session) => session.ProtocolVersion == ProtocolVersion.LoginUdp_9
-            && ConfigurationManager<AuthServerConfiguration>.Instance.Config.LoginUdp9Client522;
-
-        /// <summary>The 0.522 client shows one character per server: the one played last of each.</summary>
-        public static IEnumerable<CharacterModel> NewestPerServer(IEnumerable<CharacterModel> characters, Func<CharacterModel, ulong> serverOf)
-            => characters.GroupBy(serverOf)
-                .Select(server => server
-                    .OrderByDescending(c => c.LastOnline ?? DateTime.MinValue)
-                    .ThenByDescending(c => c.Id)
-                    .First());
-
         [AuthMessageHandler(AuthMessageOpcode.CharacterSelectInfoRequest, ProtocolVersion.LoginUdp_10)]
         public static void HandleCharacterSelectInfoRequest(AuthSession session, CharacterSelectInfoRequest request)
-            => SendCharacterList(session);
-
-        /// <summary>
-        /// The character list. The 0.522 client reads it in the LoginUdp_10 layout and skips a character it can't place
-        /// under a listed server, so each one goes under a server that exists.
-        /// </summary>
-        private static void SendCharacterList(AuthSession session)
         {
-            bool client522 = Is522(session);
-
             uint GetModelForGenderFromProfile(uint profileId, Gender gender)
             {
                 var profile = GameTableManager.Instance.ProfileDefinitions.GetEntry(profileId);
-                if (profile == null)
-                    return 252u;
                 switch (gender)
                 {
                     case Gender.Male:
@@ -192,14 +159,8 @@ namespace LandmarkEmulator.AuthServer.Network.Handlers
                         Status = 1
                     };
 
-                    IEnumerable<CharacterModel> listed = characters.Where(c => c.DeleteTime == null);
-                    if (client522)
-                        listed = NewestPerServer(listed, c => GetServerIdForNewCharacter(c.LastServerId));
-
-                    foreach (CharacterModel model in listed)
+                    foreach (CharacterModel model in characters.Where(c => c.DeleteTime == null))
                     {
-                        ulong lastServerId = client522 ? GetServerIdForNewCharacter(model.LastServerId) : model.LastServerId;
-
                         // Build base payload
                         var characterPayload = new CharacterSelectInfoReply.Character.CharacterPayload
                         {
@@ -211,7 +172,7 @@ namespace LandmarkEmulator.AuthServer.Network.Handlers
                             // The world the client selects for this character (data source column ServerId, used by
                             // CharacterSelection.lua): its last world while that world is in the list, else 0 (the client
                             // picks the best world).
-                            ServerId = ZoneServerManager.Instance.ZoneServers.Any(z => z.Id == lastServerId) ? lastServerId : 0ul
+                            ServerId = ZoneServerManager.Instance.ZoneServers.Any(z => z.Id == model.LastServerId) ? model.LastServerId : 0ul
                         };
                         characterPayload.Model.SkinId = model.SkinTint;
                         characterPayload.Model.Race = model.Race;
@@ -236,7 +197,7 @@ namespace LandmarkEmulator.AuthServer.Network.Handlers
                             Status = 1,
                             CharacterId = model.Id,
                             LastLogin = DateTime.Now.Subtract(model.LastOnline ?? DateTime.Now).TotalDays * -1d,
-                            LastServerId = lastServerId,
+                            LastServerId = model.LastServerId,
                             CharacterData = characterPayload
                         });
                     }
@@ -248,12 +209,6 @@ namespace LandmarkEmulator.AuthServer.Network.Handlers
         [AuthMessageHandler(AuthMessageOpcode.CharacterSelectInfoRequest, ProtocolVersion.LoginUdp_9)]
         public static void HandleCharacterSelectInfoRequest9(AuthSession session, CharacterSelectInfoRequest request)
         {
-            if (Is522(session))
-            {
-                SendCharacterList(session);
-                return;
-            }
-
             uint GetModelId(Gender gender)
             {
                 if (gender == Gender.Male)
@@ -461,7 +416,7 @@ namespace LandmarkEmulator.AuthServer.Network.Handlers
                 AccountId     = session.Account.Id,
                 Name          = request.Name,
                 Gender        = (byte)request.Gender,
-                Race          = (byte)request.Race,
+                Race          = (byte)Race.Human,
                 ProfileTypeId = request.ProfileTypeId,
                 SkinTint      = request.SkinTint
             };
@@ -549,11 +504,8 @@ namespace LandmarkEmulator.AuthServer.Network.Handlers
         {
             if (request.GatewayId != 0)
                 log.Info($"Character login asks for gateway {request.GatewayId} (locale id {request.LocaleId}); this server has one gateway per world.");
+            ZoneServer server = ZoneServerManager.Instance.ZoneServers.SingleOrDefault(x => x.Id == request.ServerId);
             CharacterModel character = session.Characters.SingleOrDefault(x => x.Id == request.CharacterId);
-            // The 0.522 client sends 0 here from character select.
-            ulong serverId = request.ServerId == 0ul && character != null && Is522(session)
-                ? GetServerIdForNewCharacter(character.LastServerId) : request.ServerId;
-            ZoneServer server = ZoneServerManager.Instance.ZoneServers.SingleOrDefault(x => x.Id == serverId);
             if (server == null || character == null)
             {
                 Refuse(session, request, server == null ? CharacterLoginResult.ServerNotFound : CharacterLoginResult.NotAllowed);
@@ -602,7 +554,7 @@ namespace LandmarkEmulator.AuthServer.Network.Handlers
                     session.EnqueueMessage(new CharacterLoginReply
                     {
                         CharacterId = request.CharacterId,
-                        ServerId    = serverId,
+                        ServerId    = request.ServerId,
                         Result      = CharacterLoginResult.Success,
                         Server      = serverInfo
                     });
