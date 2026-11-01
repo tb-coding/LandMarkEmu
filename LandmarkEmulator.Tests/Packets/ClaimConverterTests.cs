@@ -50,7 +50,7 @@ namespace LandmarkEmulator.Tests.Packets
             w.Write(0ul);
             w.Write(0u);
             w.Write(false);
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < (extra ? 5 : 4); i++)
                 w.Write(0u);
             w.Write(false);
             w.Write(0u);
