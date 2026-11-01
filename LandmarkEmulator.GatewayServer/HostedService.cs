@@ -37,7 +37,6 @@ namespace LandmarkEmulator.GatewayServer
             else
                 DatabaseManager.Instance.Initialise(config.Database);
             GatewayClient.HoldLimit = TimeSpan.FromSeconds(System.Math.Max(0, config.HoldSeconds));
-            Gateway.Network.ClientBuilds.Allow(config.AllowedClientBuilds);
             SocketHeartbeat.DefaultTimeoutSeconds = config.ClientTimeoutSeconds;
             log.Info(SocketHeartbeat.DefaultTimeoutSeconds > 0
                 ? $"A silent client is disconnected after {SocketHeartbeat.DefaultTimeoutSeconds:0} s."

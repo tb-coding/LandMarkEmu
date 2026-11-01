@@ -54,6 +54,13 @@ namespace LandmarkEmulator.Tests.Packets
             Assert.Same(keepAlive, translator.Inbound(Channel.Zone, keepAlive));
         }
 
+        [Theory]
+        [InlineData("2F 00 01 00 AA", null)]
+        [InlineData("2F 00 02 00 AA", null)]
+        [InlineData("2F 00 03 00 AA BB", "2F 00 03 00 00 00 00 00")]
+        public void ReferenceData_KeepsAnEmptyProfileList(string hex, string expected)
+            => Assert.Equal(expected == null ? null : Wire.Hex(expected), translator.Outbound(Channel.Zone, Wire.Hex(hex)));
+
         [Fact]
         public void PlayerUpdate_InboundSubBecomesU32()
             => Assert.Equal(Wire.Hex("26 00 01 00 00 00 AA BB"), translator.Inbound(Channel.Zone, Wire.Hex("26 00 01 AA BB")));

@@ -171,9 +171,6 @@ namespace LandmarkEmulator.WorldServer.Game
                 Note = "Read at each check (SocketHeartbeat.DefaultTimeoutSeconds), for this world's in-process gateway. With a separate gateway "
                     + "(GATEWAY_INTERNAL_ADDRESS) the gateway container's value counts: change CLIENT_TIMEOUT_SECONDS in .env and restart the gateway. "
                     + "60 = two of the client's 29 s keep-alives; below 30 counts as 30; 0 = never. Live's server value is not known." },
-            Edit("AllowedClientBuilds", SettingApply.Restart) with { MaxLength = 255,
-                Note = "Read at start-up (ClientBuilds.Allow), for this world's in-process gateway. With a separate gateway change ALLOWED_CLIENT_BUILDS in .env "
-                    + "and restart that container." },
             Edit("FreeBuild", SettingApply.NextLogin, "false") with {
                 Note = "The server checks it at once (Props.FreeBuild); the game client gets it with the player's data at login, so players relog." },
             Edit("MovementEffects", SettingApply.Now, "true") with { Note = "Read at each cast (MovementEffects.Enabled; a dev command override wins)." },

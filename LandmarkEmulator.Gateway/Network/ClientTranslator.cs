@@ -1,3 +1,4 @@
+using LandmarkEmulator.Gateway.Network.Client522;
 using LandmarkEmulator.Gateway.Network.Message;
 using NLog;
 using System;
@@ -34,14 +35,17 @@ namespace LandmarkEmulator.Gateway.Network
     /// trusted to mean the same thing here). PlayerUpdate 0x26 has a u8 sub in 0.522 and a u32 sub in 0.695, and from
     /// <see cref="PlayerUpdateNew"/> on 0.522's subs are one lower. Claims 0xF9 subs from 0x18 on are one lower in 0.522. The
     /// position channel has no opcode and passes unchanged.
-    /// Bodies are not converted: packets whose layout changed between the clients still need their own step.
+    /// Of the login packets, SendZoneDetails and SendSelfToClient are rewritten to 0.522's layouts and ReferenceData keeps
+    /// only an empty profile list; other bodies are not converted.
     /// </summary>
     public sealed class Client522Translator : IClientTranslator
     {
         private static readonly ILogger log = LogManager.GetCurrentClassLogger();
 
         private const byte PlayerUpdate = 0x26;
+        private const byte SendSelf = 0x0F, ZoneDetails = 0x2E, ReferenceData = 0x2F;
         private const byte Claims = 0xF9;
+        private const byte ProfileDefinitionsSub = 3;
         /// <summary>The 0.522 Claims subs one lower than 0.695's (vtable constants: 0x18 to SetSupplementalData 0x3D).</summary>
         private const byte ClaimsShiftFirst = 0x18, ClaimsShiftLast = 0x3D;
 
@@ -130,6 +134,12 @@ namespace LandmarkEmulator.Gateway.Network
             }
             if (opcode == Claims)
                 return data.Length >= 3 && data[2] is > ClaimsShiftFirst and <= ClaimsShiftLast + 1 ? WithSub(data, (byte)(data[2] - 1)) : data;
+            if (opcode == SendSelf)
+                return SendSelfConverter.Convert(data);
+            if (opcode == ZoneDetails)
+                return TrimZoneDetails(data);
+            if (opcode == ReferenceData)
+                return data.Length >= 4 && data[2] == ProfileDefinitionsSub ? new byte[] { data[0], data[1], data[2], data[3], 0, 0, 0, 0 } : null;
             if (opcode != PlayerUpdate)
                 return data;
             if (data.Length < 6)
@@ -147,6 +157,23 @@ namespace LandmarkEmulator.Gateway.Network
             converted[2] = data[2] > PlayerUpdateNew ? (byte)(data[2] - 1) : data[2];
             Array.Copy(data, 6, converted, 3, data.Length - 6);
             return converted;
+        }
+
+        /// <summary>
+        /// 0.522 doesn't read the end of the zone details: the continent's ProceduralLayerType (u32) and DistanceField
+        /// (string), then IsNewbieZone (bool). The string is found from the back.
+        /// </summary>
+        public static byte[] TrimZoneDetails(byte[] data)
+        {
+            int last = data.Length - 1;
+            for (int length = 0; length < 256 && last - length - 4 >= 2; length++)
+            {
+                int start = last - length - 4;
+                if (BitConverter.ToInt32(data, start) == length)
+                    return data[..(start - 4)];
+            }
+            log.Warn("0.522: zone details without the expected end, sent as they are.");
+            return data;
         }
 
         private static byte[] WithSub(byte[] data, byte sub)

@@ -585,12 +585,6 @@ namespace LandmarkEmulator.WorldServer.Network
             Game.Landscapes.LeaveClosedEventIsland(model);   // the Events world switched islands since the last login
             Game.Pioneer.LeaveOldLand(model);   // saved on an old Pioneer land (417-421): to their site or the new land
             Game.Pioneer.Settle(model);   // a brand-new character starts on its own site on a Pioneer land
-            if (Gateway.Network.ClientBuilds.Is522(ClientBuild))
-            {
-                Login522(model);
-                Game.PlayerManager.ReplaceOlderSessions(this);
-                return;
-            }
             EnqueueMessage(ZoneMessageOpcode.SendZoneDetails, Game.Landscapes.ZoneDetails(model.ZoneId));
 
             // Setup Player, Send Packets, etc.
@@ -616,79 +610,6 @@ namespace LandmarkEmulator.WorldServer.Network
             // and hasn't timed out yet) goes now, not when this client has finished loading: the others stop seeing the
             // dead one at once.
             Game.PlayerManager.ReplaceOlderSessions(this);
-        }
-
-        /// <summary>
-        /// The login of the 0.522 client: zone details, an empty profile list (it starts its model preload on this
-        /// packet) and SendSelf in its own layout, and none of the 0.695 reference data.
-        /// </summary>
-        private void Login522(CharacterModel model)
-        {
-            EnqueueMessage(ZoneMessageOpcode.SendZoneDetails, ZoneDetails522(Game.Landscapes.ZoneDetails(model.ZoneId)));
-            // Before SendSelf: the client tints the player when it builds the model and doesn't do it again, so the
-            // ClientIsReady copy comes too late for this body.
-            EnqueueMessage(ZoneMessageOpcode.ArtDataTintDefinitionManagerData, Game.ArtTints.Body);
-            EnqueueMessage(ZoneMessageOpcode.ReferenceDataProfileDefinitions, new byte[4]);
-            BuildSendToSelfPacket(send: false);
-            EnqueueMessage(BuildSendSelf522(model));
-        }
-
-        /// <summary>
-        /// 0.695 zone details without what 0.522 doesn't read, which is the end of the packet: the continent's
-        /// ProceduralLayerType and DistanceField, and IsNewbieZone.
-        /// </summary>
-        public static byte[] ZoneDetails522(byte[] details)
-        {
-            var read = new SendZoneDetails();
-            read.Read(new GamePacketReader(details));
-            read.Continent.DistanceField = "";
-            var bytes = new List<byte>();
-            read.Write(new GamePacketWriter(bytes));
-            return bytes.GetRange(0, bytes.Count - (4 + 4 + 1)).ToArray();
-        }
-
-        /// <summary>SendSelf in the 0.522 layout: the character only, no items or hotbars.</summary>
-        private SendSelfToClient694 BuildSendSelf522(CharacterModel character)
-        {
-            ProfileDefinitionEntry profile = GameTableManager.Instance.ProfileDefinitions.GetEntry(character.ProfileTypeId)
-                ?? GameTableManager.Instance.ProfileDefinitions.Entries.OrderBy(e => e.Id).First();
-            var message = new SendSelfToClient694
-            {
-                Guid = character.Id,
-                CharacterId = character.Id,
-                AccountName = Account.Username,
-                GenderMaybe = (Gender)character.Gender,
-                Unknown22 = character.Race,
-                ModelId = modelId,
-                Model = modelInfo,
-                CurrentProfile = profile.Id,
-            };
-            message.Identity.FirstName = character.Name;
-            if (character.PositionX != 0f || character.PositionY != 0f || character.PositionZ != 0f)
-            {
-                message.Unknown3 = new Vector4(character.PositionX, character.PositionY, character.PositionZ, 1f);
-                message.Unknown4 = new Vector4(character.RotationX, character.RotationY, character.RotationZ, character.RotationW);
-            }
-            message.Profiles.Add(new SendSelfToClient694.Profile
-            {
-                Unknown0 = profile.Id,
-                NameId = new Shared.Game.LandmarkText(profile.NameId),
-                Unknown3 = profile.ProfileType,
-                Unknown15 = 1,
-                Unknown19 = profile.StandCameraHeight,
-                Unknown20 = profile.LineOfSightHeight,
-                Unknown21 = profile.CapsuleRadius,
-                Unknown22 = 1,
-                Unknown23 = profile.CrouchCameraHeight,
-                Unknown24 = profile.Mass,
-                Unknown29 = profile.CharSize,
-                Unknown30 = profile.Armor,
-                Unknown31 = profile.Feet,
-            });
-            message.Unknown24.Add((profile.Id, profile.Id, 0));
-            message.Unknown30.Add((profile.ProfileType, profile.Id));
-            message.Loadouts[0].Unknown1.Unknown1 = profile.Id;
-            return message;
         }
 
         /// <summary>

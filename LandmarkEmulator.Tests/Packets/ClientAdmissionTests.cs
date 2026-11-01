@@ -18,7 +18,7 @@ namespace LandmarkEmulator.Tests.Packets
         private const string Build522 = "0.522.3.116271";
         private const string Protocol694 = "LandmarkClientProtocol_694";
 
-        public void Dispose() => ClientBuilds.Allow("");
+        public void Dispose() => ClientBuilds.Allow(Build522);
 
         [Fact]
         public void Protocol694_IsRefusedUnlessItsBuildIsAllowed()

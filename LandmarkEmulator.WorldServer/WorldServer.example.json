@@ -40,7 +40,6 @@
   "SettingsOverridesFile": "",
   "WatchdogSeconds": 180,
   "ClientTimeoutSeconds": 60,
-  "AllowedClientBuilds": "",
   "WebPagesPort": 19001,
   "WebPagesHost": "",
   "WebPagesUrl": "",

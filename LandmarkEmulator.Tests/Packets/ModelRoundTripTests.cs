@@ -30,8 +30,8 @@ namespace LandmarkEmulator.Tests.Packets
         private static IEnumerable<Type> Models(Func<Type, bool> filter)
             => Assemblies.SelectMany(a => a.GetTypes())
                 .Where(t => t.IsClass && !t.IsAbstract && !t.ContainsGenericParameters
-                    // The 0.522 SendSelf is only ever written, with most lists empty (WorldSession.Login522).
-                    && !t.FullName.Contains("SendSelf522Data") && !t.FullName.Contains("SendSelfToClient694")
+                    // The 0.522 SendSelf is only ever written, with most lists empty (Client522Translator).
+                    && t.Namespace?.EndsWith("Client522") != true
                     && t.GetConstructor(Type.EmptyTypes) != null && filter(t))
                 .OrderBy(t => t.FullName, StringComparer.Ordinal);
 

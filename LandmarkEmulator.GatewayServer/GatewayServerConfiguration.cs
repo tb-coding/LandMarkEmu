@@ -53,12 +53,6 @@ namespace LandmarkEmulator.GatewayServer
         /// </summary>
         public string MultiWorld { get; set; } = "auto";
 
-        /// <summary>
-        /// Client builds admitted with a protocol the server doesn't speak natively (ClientBuilds.Admit), comma separated,
-        /// e.g. "0.522.3.116271". Empty: none. Docker: ALLOWED_CLIENT_BUILDS (the same .env line as the world's).
-        /// </summary>
-        public string AllowedClientBuilds { get; set; } = "";
-
         /// <summary>Seconds a connection waits for its zone to come back after the zone went away (gateway-service.md §3.5).</summary>
         public double HoldSeconds { get; set; } = 120;
 
