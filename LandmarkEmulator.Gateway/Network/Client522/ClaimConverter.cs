@@ -46,8 +46,8 @@ namespace LandmarkEmulator.Gateway.Network.Client522
                         copier.Bytes(1 + 8);
                         copier.Text();
                         copier.Add(0u);                             // 0.522's u64 list
+                        copier.Add(0u);                             // and a u32 in front: the last two are world and zone
                         copier.Bytes(4 + 4);
-                        copier.Add(0u);                             // and its third u32
                     }
                     break;
                 case EditItem:
