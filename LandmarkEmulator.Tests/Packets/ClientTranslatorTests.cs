@@ -28,6 +28,39 @@ namespace LandmarkEmulator.Tests.Packets
             Assert.Same(data, translator.Outbound(Channel.Zone, data));
         }
 
+        [Fact]
+        public void ItemUpdate_KeepsOneBlock_AndEndsWithTheFloat()
+        {
+            var packet = new byte[104];
+            packet[0] = 0x29;
+            packet[2] = 3;
+            packet[12] = 7;     // count
+            packet[39] = 2;     // container
+            packet[99] = 0xFF;  // the wear, not sent
+
+            byte[] converted = translator.Outbound(Channel.Zone, packet);
+
+            Assert.Equal(72, converted.Length);
+            Assert.Equal(packet[..68], converted[..68]);
+            Assert.Equal(1f, System.BitConverter.ToSingle(converted, 68));
+        }
+
+        [Fact]
+        public void ItemUpdate_OfAnotherLength_IsDropped()
+            => Assert.Null(translator.Outbound(Channel.Zone, new byte[] { 0x29, 0, 3, 0, 1 }));
+
+        [Theory]
+        [InlineData("CB 00 02 2E 00")]
+        [InlineData("CB 00 03 2E 00")]
+        public void EquipmentSlots_PassUnchanged(string hex)
+        {
+            byte[] data = Wire.Hex(hex);
+            Assert.Same(data, translator.Outbound(Channel.Zone, data));
+        }
+
+        [Fact]
+        public void OtherEquipmentSubs_AreHeldBack() => Assert.Null(translator.Outbound(Channel.Zone, Wire.Hex("CB 00 01 2E 00")));
+
         [Theory]
         [InlineData("56 00 01")]    // ClaimReportSubmissionBase, 0.695 only
         [InlineData("19 01 00")]    // above the client's table
