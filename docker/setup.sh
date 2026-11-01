@@ -21,6 +21,8 @@ else
     echo "Locale/en_us_data.dat was not found in the Landmark folder: names will be missing in game."
 fi
 cp -r /project/data/. /gamedata/
+# An older client's tables get the columns this server reads.
+sed 's/$//' /project/docker/fit-tables.sh | sh -s /gamedata
 
 heights=/project/LandmarkEmu-terrain-heights.zip
 if [ -f "$heights" ]; then
