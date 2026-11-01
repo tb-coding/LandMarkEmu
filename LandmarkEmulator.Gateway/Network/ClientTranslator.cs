@@ -44,7 +44,7 @@ namespace LandmarkEmulator.Gateway.Network
 
         private const byte PlayerUpdate = 0x26;
         private const byte SendSelf = 0x0F, CommandBase = 0x1E, ZoneDetails = 0x2E, ReferenceData = 0x2F;
-        private const byte ItemDefinitionsSub = 0x4B;
+        private const byte ItemDefinitionsSub = 0x4B, InteractionClaimSub = 0x4D;
         private const byte Claims = 0xF9;
         private const byte ProfileDefinitionsSub = 3;
         /// <summary>The 0.522 Claims subs one lower than 0.695's (vtable constants: 0x18 to SetSupplementalData 0x3D).</summary>
@@ -153,6 +153,8 @@ namespace LandmarkEmulator.Gateway.Network
             {
                 if (data.Length > 8 && data[2] == ItemDefinitionsSub && data[3] == 0)
                     return ItemDefinitionConverter.Convert(data);
+                if (data.Length > 2 && data[2] == InteractionClaimSub)
+                    return data;
                 if (data.Length > 2 && heldBack.Add(data[2] | CommandBase << 8))
                     log.Info($"0.522: holding back CommandBase sub 0x{data[2]:X}: {Show(data)}");
                 return null;
