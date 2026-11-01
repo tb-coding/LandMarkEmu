@@ -120,10 +120,15 @@ namespace LandmarkEmulator.Gateway.Network.Client522
             copier.Skip();                                          // the rest: an empty list, time of day, music, mode, flags
         }
 
-        /// <summary>The site's game: 0.695 ends with one more u32.</summary>
+        /// <summary>
+        /// The site's game (FUN_1433ba960): 0.522 has 4 u32 where 0.695 has 5 and no u32 at the end. The difficulty goes
+        /// because the walk-on window shows it only when set; which of the five 0.522 lacks is not confirmed.
+        /// </summary>
         private static void Game(Copier copier)
         {
-            copier.Bytes(8 + 4 + 1 + 4 * 4 + 1 + 4);
+            copier.Bytes(8 + 4 + 1 + 3 * 4);
+            copier.Drop(4);
+            copier.Bytes(4 + 1 + 4);
             copier.Text();
             for (uint i = copier.U32(); i > 0; i--)
             {
