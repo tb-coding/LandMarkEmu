@@ -96,6 +96,7 @@ namespace LandmarkEmulator.Gateway.Network.Client522
             message.Unknown24.Add((profile.Id, profile.Id, 0));
             message.Unknown30.Add((profile.Type, profile.Id));
             message.Loadouts[0].Unknown1.Unknown1 = profile.Id;
+            ReadInventory(reader, message.Inventory);
 
             var bytes = new List<byte> { packet[0], packet[1] };
             var body = new List<byte>();
@@ -104,6 +105,77 @@ namespace LandmarkEmulator.Gateway.Network.Client522
             writer.Write((uint)body.Count);
             bytes.AddRange(body);
             return bytes.ToArray();
+        }
+
+        /// <summary>
+        /// The bag, which comes after the profiles. Collections and buffs in front of it have long records: with any of
+        /// those the character goes in with an empty bag.
+        /// </summary>
+        private static void ReadInventory(GamePacketReader reader, InventoryData694 inventory)
+        {
+            for (uint i = reader.ReadUInt(); i > 0; i--)
+                Skip(reader, 8);            // last played profile by type
+            if (reader.ReadUInt() != 0)     // collections
+                return;
+            for (uint i = reader.ReadUInt(); i > 0; i--)
+                Skip(reader, 12);           // ability cooldowns
+            reader.ReadUInt();              // cast key seed
+            if (reader.ReadUInt() != 0)     // buffs
+                return;
+
+            Skip(reader, 12 * 5);           // the containers, always the same 12
+            for (uint i = reader.ReadUInt(); i > 0; i--)
+                inventory.Items.Add(ReadItem(reader));
+        }
+
+        private static InventoryItem694 ReadItem(GamePacketReader reader)
+        {
+            var item = new InventoryItem694 { DefinitionId = reader.ReadUInt(), Unknown0C = reader.ReadUInt() };
+            SkipRandomData(reader);
+            SkipRandomData(reader);
+            reader.ReadUInt();              // cost multiplier
+            item.Guid = reader.ReadULong();
+            item.Count = reader.ReadUInt();
+            item.Unknown7C = reader.ReadUInt();
+            item.Unknown80 = reader.ReadUInt();
+            item.Unknown84 = reader.ReadBool();
+            item.ContainerId = reader.ReadUInt();
+            item.Unknown98 = reader.ReadULong();
+            item.SlotId = reader.ReadUInt();
+            reader.ReadUInt();              // owner type: 0.522 needs its own value for ActivateItem (InventoryItem694)
+            item.UnknownA8 = reader.ReadULong();
+            item.UnknownB0 = reader.ReadULong();
+            item.UnknownB8 = reader.ReadUInt();
+            item.UnknownBC = reader.ReadUInt();
+            item.UnknownF0 = reader.ReadByte();
+            item.Time = reader.ReadUInt();
+            if (reader.ReadByte() != 0)     // rental
+                Skip(reader, 16);
+            if (reader.ReadByte() != 0)     // design
+            {
+                reader.ReadULong();
+                reader.ReadString();
+                reader.ReadString();
+            }
+            if (reader.ReadByte() != 0)     // meta data
+                if (reader.ReadUInt() == 1)
+                    Skip(reader, 8);
+            item.UnknownE0 = reader.ReadUInt();
+            item.ExtraByte = reader.ReadByte();
+            return item;
+        }
+
+        private static void SkipRandomData(GamePacketReader reader)
+        {
+            Skip(reader, 20);
+            for (uint i = reader.ReadUInt(); i > 0; i--)
+            {
+                Skip(reader, 4);
+                new LandmarkText().Read(reader);
+                Skip(reader, 8 + 1 + 12);
+            }
+            for (uint i = reader.ReadUInt(); i > 0; i--)
+                Skip(reader, 12);
         }
 
         private static Profile ReadProfile(GamePacketReader reader)
