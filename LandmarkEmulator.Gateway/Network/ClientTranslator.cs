@@ -134,7 +134,19 @@ namespace LandmarkEmulator.Gateway.Network
                 return null;
             }
             if (opcode == Claims)
-                return data.Length >= 3 && data[2] is > ClaimsShiftFirst and <= ClaimsShiftLast + 1 ? WithSub(data, (byte)(data[2] - 1)) : data;
+            {
+                if (data.Length >= 3 && data[2] is > ClaimsShiftFirst and <= ClaimsShiftLast + 1)
+                    return WithSub(data, (byte)(data[2] - 1));
+                try
+                {
+                    return data.Length >= 3 ? ClaimConverter.Convert(data) : data;
+                }
+                catch (Exception e) when (e is ArgumentException or IndexOutOfRangeException or InvalidOperationException)
+                {
+                    log.Warn($"0.522: dropped a Claims packet that wouldn't convert ({e.Message}): {Show(data)}");
+                    return null;
+                }
+            }
             if (opcode == SendSelf)
                 return SendSelfConverter.Convert(data);
             if (opcode == CommandBase)

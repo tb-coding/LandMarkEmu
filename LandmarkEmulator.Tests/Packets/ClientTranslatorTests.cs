@@ -20,7 +20,7 @@ namespace LandmarkEmulator.Tests.Packets
 
         [Theory]
         [InlineData("37 00 01 02 03 04")]   // GameTimeSync
-        [InlineData("F9 00 04")]            // ClaimsBase below the renumbered subs
+        [InlineData("F9 00 0A")]            // ClaimsBase below the renumbered subs
         public void RegisteredOpcodes_PassUnchanged(string hex)
         {
             byte[] data = Wire.Hex(hex);
