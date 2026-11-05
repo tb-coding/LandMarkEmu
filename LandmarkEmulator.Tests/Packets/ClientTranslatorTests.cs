@@ -46,6 +46,34 @@ namespace LandmarkEmulator.Tests.Packets
         }
 
         [Fact]
+        public void ItemUpdate_WithToolStats_KeepsTheFirstBlockAndItsStats()
+        {
+            // RE-Build sends the pick's three stats in the first block: 40 + (28 + 3 × 29) + 28 + 8 = 191 bytes (73rd test).
+            var packet = new byte[191];
+            packet[0] = 0x29;
+            packet[2] = 3;
+            packet[60] = 3;     // stat count of the first block
+            packet[150] = 0xAB; // last byte of the first block's catalyst count area, kept
+
+            byte[] converted = translator.Outbound(Channel.Zone, packet);
+
+            Assert.Equal(40 + 115 + 4, converted.Length);
+            Assert.Equal(packet[..155], converted[..155]);
+            Assert.Equal(1f, System.BitConverter.ToSingle(converted, 155));
+        }
+
+        [Fact]
+        public void ItemUpdate_WithAStatCountPastTheEnd_IsDropped()
+        {
+            var packet = new byte[104];
+            packet[0] = 0x29;
+            packet[2] = 3;
+            packet[60] = 9;
+
+            Assert.Null(translator.Outbound(Channel.Zone, packet));
+        }
+
+        [Fact]
         public void ItemUpdate_OfAnotherLength_IsDropped()
             => Assert.Null(translator.Outbound(Channel.Zone, new byte[] { 0x29, 0, 3, 0, 1 }));
 
