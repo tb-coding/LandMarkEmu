@@ -20,7 +20,7 @@ namespace LandmarkEmulator.Gateway.Network.Client522
     /// </remarks>
     public class SendSelfToClient694 : IWritable
     {
-        private const uint HotbarCount = 9, HotbarSlots = 12;
+        private const uint HotbarCount = 9, SlotsPerBar = 12;
 
         // FUN_143251fd0, same as SendSelf522Data.Profile but with 14 trailing uints instead of 15.
         public class Profile : IWritable
@@ -151,8 +151,10 @@ namespace LandmarkEmulator.Gateway.Network.Client522
         public SendSelf522Data.QuestData Quests { get; set; } = new();
         public List<uint> Unknown40 { get; set; } = new();
         /// <summary>
-        /// Hotbars (docs/22 #48), empty = 0 like before cloud batch 9.
+        /// The slots the server saved, by (bar, slot): button type and value (an item's guid). Written into the empty bars;
+        /// slots outside them are left out (T022, 73rd test).
         /// </summary>
+        public Dictionary<(uint Bar, uint Slot), (uint Type, ulong Value)> HotbarSlots { get; } = new();
         public bool SendFirstTimeEvents { get; set; }
         public List<uint> Unknown46 { get; set; } = new();
         public List<uint> Unknown47 { get; set; } = new();
@@ -277,18 +279,19 @@ namespace LandmarkEmulator.Gateway.Network.Client522
 
             // 0.695 has Unknown41, Unknown42 and Hotbars here, 0.522 only has one list: the hotbars (docs/22 #48).
             // Empty bars: the client needs them to accept a slot (ActionBarManager.log asks for bar id 8). The slots saved
-            // on the server come later in the 0.695 packet and aren't read, so a filled bar is empty again after a relog.
+            // on the server (<see cref="HotbarSlots"/>, found in the 0.695 packet by SendSelfConverter) fill them.
             writer.Write(HotbarCount);
             for (uint bar = 0; bar < HotbarCount; bar++)
             {
                 writer.Write(bar);
-                writer.Write(HotbarSlots);
-                for (uint slot = 0; slot < HotbarSlots; slot++)
+                writer.Write(SlotsPerBar);
+                for (uint slot = 0; slot < SlotsPerBar; slot++)
                 {
+                    HotbarSlots.TryGetValue((bar, slot), out (uint Type, ulong Value) button);
                     writer.Write(slot);
                     writer.Write(0u);
-                    writer.Write(0u);
-                    writer.Write(0ul);
+                    writer.Write(button.Type);
+                    writer.Write(button.Value);
                 }
             }
 

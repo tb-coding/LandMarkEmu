@@ -2,6 +2,7 @@ using LandmarkEmulator.Shared.Game;
 using LandmarkEmulator.Shared.Game.Entity.Static;
 using LandmarkEmulator.Shared.Network;
 using LandmarkEmulator.Shared.Network.Message.Model.Shared;
+using System;
 using System.Collections.Generic;
 using System.Numerics;
 
@@ -97,6 +98,9 @@ namespace LandmarkEmulator.Gateway.Network.Client522
             message.Unknown30.Add((profile.Type, profile.Id));
             message.Loadouts[0].Unknown1.Unknown1 = profile.Id;
             ReadInventory(reader, message.Inventory);
+            int searchFrom = packet.Length - (int)reader.BytesRemaining;
+            foreach (var (key, button) in FindHotbars(packet, searchFrom))
+                message.HotbarSlots[key] = button;
 
             var bytes = new List<byte> { packet[0], packet[1] };
             var body = new List<byte>();
@@ -168,6 +172,59 @@ namespace LandmarkEmulator.Gateway.Network.Client522
             if (extraByte || reader.BytesRemaining > 0)
                 item.ExtraByte = reader.ReadByte();
             return item;
+        }
+
+        /// <summary>The bars and slots the server sends (RE-Build WorldSession.BuildHotbars: 2 bars of 10).</summary>
+        public const int MaxBars = 9, MaxSlots = 12;
+        /// <summary>Fewer bars or slots than this are not taken for the hotbars: short zero runs would match.</summary>
+        public const int MinBars = 2, MinSlots = 8;
+        private const int Button = 4 + 4 + 4 + 8;
+
+        /// <summary>
+        /// The saved hotbar slots of a 0.695 SendSelfToClient, from <paramref name="from"/> on. Between the bag and the
+        /// hotbars lie quests, achievements and recipes, too long to read here, so the hotbar list is found by its shape:
+        /// u32 bar count, then per bar {u32 bar id, u32 slot count, per slot {u32 bar id, u32 slot id, u32 type, u64 value}}
+        /// with the bar ids 0, 1, … and the slot ids 0, 1, … in order. Empty slots (type 0) are left out. None found: empty.
+        /// </summary>
+        public static Dictionary<(uint Bar, uint Slot), (uint Type, ulong Value)> FindHotbars(byte[] packet, int from)
+        {
+            var found = new Dictionary<(uint, uint), (uint, ulong)>();
+            for (int p = Math.Max(0, from); p + 12 <= packet.Length; p++)
+            {
+                uint bars = BitConverter.ToUInt32(packet, p);
+                if (bars < MinBars || bars > MaxBars || BitConverter.ToUInt32(packet, p + 4) != 0)
+                    continue;
+                uint slots = BitConverter.ToUInt32(packet, p + 8);
+                if (slots < MinSlots || slots > MaxSlots)
+                    continue;
+                if (TryReadHotbars(packet, p, bars, found))
+                    return found;
+                found.Clear();
+            }
+            return found;
+        }
+
+        private static bool TryReadHotbars(byte[] packet, int p, uint bars, Dictionary<(uint, uint), (uint, ulong)> found)
+        {
+            int at = p + 4;
+            for (uint bar = 0; bar < bars; bar++)
+            {
+                if (at + 8 > packet.Length || BitConverter.ToUInt32(packet, at) != bar)
+                    return false;
+                uint slots = BitConverter.ToUInt32(packet, at + 4);
+                if (slots < MinSlots || slots > MaxSlots || at + 8 + slots * Button > packet.Length)
+                    return false;
+                at += 8;
+                for (uint slot = 0; slot < slots; slot++, at += Button)
+                {
+                    if (BitConverter.ToUInt32(packet, at) != bar || BitConverter.ToUInt32(packet, at + 4) != slot)
+                        return false;
+                    uint type = BitConverter.ToUInt32(packet, at + 8);
+                    if (type != 0)
+                        found[(bar, slot)] = (type, BitConverter.ToUInt64(packet, at + 12));
+                }
+            }
+            return true;
         }
 
         private static void SkipRandomData(GamePacketReader reader)

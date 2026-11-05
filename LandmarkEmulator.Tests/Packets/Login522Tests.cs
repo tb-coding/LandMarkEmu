@@ -101,5 +101,40 @@ namespace LandmarkEmulator.Tests.Packets
             Assert.Equal(want, packet[6..]);
             Assert.Equal((uint)want.Length, System.BitConverter.ToUInt32(packet, 2));
         }
+
+        [Fact]
+        public void SendSelf_KeepsTheSavedHotbarSlots()
+        {
+            // RE-Build sends 2 bars of 10 (WorldSession.BuildHotbars); 0.522 lost them on every login (T022, 73rd test).
+            var self = new SendSelfToClient { Guid = 7, AccountName = "alex", CharacterId = 7, CurrentProfile = 46 };
+            self.Identity.FirstName = "Louisa";
+            self.Profiles.Add(new SendSelfToClient.Profile { ProfileId = 46 });
+            for (uint bar = 0; bar < 2; bar++)
+            {
+                var hotbar = new SendSelfToClient.Hotbar { HotbarId = bar };
+                for (uint slot = 0; slot < 10; slot++)
+                    hotbar.HotbarButtons.Add(new SendSelfToClient.Hotbar.HotbarButton
+                    {
+                        HotbarId = bar, SlotId = slot,
+                        ButtonType = (bar, slot) == (0, 3) || (bar, slot) == (1, 9) ? 3u : 0u,
+                        ItemId = (bar, slot) == (0, 3) ? 0x1000000Aul : (bar, slot) == (1, 9) ? 0x1000000Bul : 0,
+                    });
+                self.Hotbars.Add(hotbar);
+            }
+            byte[] body = Wire.Write(self);
+            byte[] whole = new byte[] { 0x0F, 0x00 }.Concat(System.BitConverter.GetBytes(body.Length)).Concat(body).ToArray();
+
+            var slots = SendSelfConverter.FindHotbars(whole, 6);
+
+            Assert.Equal(2, slots.Count);
+            Assert.Equal((3u, 0x1000000Aul), slots[(0, 3)]);
+            Assert.Equal((3u, 0x1000000Bul), slots[(1, 9)]);
+            Assert.NotNull(SendSelfConverter.Convert(whole));
+        }
+
+        [Fact]
+        public void FindHotbars_IgnoresShortZeroRuns()
+            => Assert.Empty(SendSelfConverter.FindHotbars(new byte[] { 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                3, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0 }, 0));
     }
 }
