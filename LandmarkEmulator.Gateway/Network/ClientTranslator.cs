@@ -46,7 +46,7 @@ namespace LandmarkEmulator.Gateway.Network
         private const byte SendSelf = 0x0F, CommandBase = 0x1E, ZoneDetails = 0x2E, ReferenceData = 0x2F;
         private const byte ItemDefinitionsSub = 0x4B, InteractionClaimSub = 0x4D;
         private const byte Claims = 0xF9;
-        private const byte ClientUpdate = 0x29, ItemUpdateSub = 3;
+        private const byte ClientUpdate = 0x29, ItemAddSub = 2, ItemUpdateSub = 3;
         private const byte Abilities = 0x27, CastAttemptSub = 1, CasterInfoReplySub = 3;
         private const byte Equipment = 0xCB, EquipmentSetSlotSub = 2, EquipmentUnsetSlotSub = 3;
         private const byte ProfileDefinitionsSub = 3;
@@ -166,6 +166,8 @@ namespace LandmarkEmulator.Gateway.Network
             }
             if (opcode == ClientUpdate && data.Length >= 4 && data[2] == ItemUpdateSub && data[3] == 0)
                 return ItemUpdateConverter.Convert(data);
+            if (opcode == ClientUpdate && data.Length >= 9 && data[2] == ItemAddSub && data[3] == 0)
+                return ItemAddConverter.Convert(data);
             if (opcode == Abilities)
             {
                 // u16 sub. The caster info and the cast answers are converted; the other subs keep 0.695's bodies.

@@ -122,6 +122,29 @@ namespace LandmarkEmulator.Tests.Packets
         }
 
         [Fact]
+        public void ItemAdd_GetsThe0522ItemRecord()
+        {
+            var item = new LandmarkEmulator.WorldServer.Network.Message.Model.Shared.InventoryItem();
+            item.Definition.DefinitionId = 212;
+            item.Guid = 0x10000005;
+            item.Count = 3;
+            item.ContainerId = 0;
+            item.SlotId = 9;
+            var bytes = new List<byte> { 0x29, 0, 2, 0 };
+            new ClientUpdateItemAdd { Item = item }.Write(new GamePacketWriter(bytes));
+
+            byte[] converted = translator.Outbound(Channel.Zone, bytes.ToArray());
+
+            Assert.NotNull(converted);
+            Assert.Equal(converted.Length - 8, BitConverter.ToInt32(converted, 4));
+            Assert.Equal(0, converted[8]);                                    // no definition
+            Assert.Equal(212u, BitConverter.ToUInt32(converted, 9));          // definition id
+            int guid = 9 + 4 + 4 + 28 + 4;                                    // definition, u32, one empty block, +0x68
+            Assert.Equal(0x10000005ul, BitConverter.ToUInt64(converted, guid));
+            Assert.Equal(3u, BitConverter.ToUInt32(converted, guid + 8));
+        }
+
+        [Fact]
         public void CastFail_EndsTheCastAsASuccessWithoutAnimation()
         {
             var bytes = new List<byte> { 0x27, 0, 6, 0 };

@@ -128,7 +128,11 @@ namespace LandmarkEmulator.Gateway.Network.Client522
                 inventory.Items.Add(ReadItem(reader));
         }
 
-        private static InventoryItem694 ReadItem(GamePacketReader reader)
+        /// <summary>
+        /// One 0.695 item record as 0.522's. <paramref name="extraByte"/>: the record is followed by the byte the login list has
+        /// after each item; an ItemAdd may end without it (then 0.522's extra byte stays 0).
+        /// </summary>
+        public static InventoryItem694 ReadItem(GamePacketReader reader, bool extraByte = true)
         {
             var item = new InventoryItem694 { DefinitionId = reader.ReadUInt(), Unknown0C = reader.ReadUInt() };
             SkipRandomData(reader);
@@ -161,7 +165,8 @@ namespace LandmarkEmulator.Gateway.Network.Client522
                 if (reader.ReadUInt() == 1)
                     Skip(reader, 8);
             item.UnknownE0 = reader.ReadUInt();
-            item.ExtraByte = reader.ReadByte();
+            if (extraByte || reader.BytesRemaining > 0)
+                item.ExtraByte = reader.ReadByte();
             return item;
         }
 
