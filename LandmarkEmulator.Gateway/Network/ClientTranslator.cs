@@ -47,6 +47,7 @@ namespace LandmarkEmulator.Gateway.Network
         private const byte ItemDefinitionsSub = 0x4B, InteractionClaimSub = 0x4D;
         private const byte Claims = 0xF9;
         private const byte ClientUpdate = 0x29, ItemUpdateSub = 3;
+        private const byte Abilities = 0x27, CastAttemptSub = 1, CasterInfoReplySub = 3;
         private const byte Equipment = 0xCB, EquipmentSetSlotSub = 2, EquipmentUnsetSlotSub = 3;
         private const byte ProfileDefinitionsSub = 3;
         /// <summary>The 0.522 Claims subs one lower than 0.695's (vtable constants: 0x18 to SetSupplementalData 0x3D).</summary>
@@ -87,7 +88,7 @@ namespace LandmarkEmulator.Gateway.Network
         /// </summary>
         private static readonly HashSet<int> Converted = new()
         {
-            0x03, 0x0F, 0x11, 0x12, 0x13, 0x1E, 0x26, 0x29, 0x2E, 0x2F, 0x37, 0x9A, 0xC3, 0xCB, 0xEA, 0xEC, 0xF9, 0x116,
+            0x03, 0x0F, 0x11, 0x12, 0x13, 0x1E, 0x26, 0x27, 0x29, 0x2E, 0x2F, 0x37, 0x9A, 0xC3, 0xCB, 0xEA, 0xEC, 0xF9, 0x116,
         };
 
         /// <summary>Held-back opcodes, each logged once per connection.</summary>
@@ -106,6 +107,8 @@ namespace LandmarkEmulator.Gateway.Network
             }
             if (opcode == Claims)
                 return data.Length >= 3 && data[2] is >= ClaimsShiftFirst and <= ClaimsShiftLast ? WithSub(data, (byte)(data[2] + 1)) : data;
+            if (opcode == Abilities && data.Length >= 4 && data[2] == CastAttemptSub && data[3] == 0)
+                return CastConverter.AttemptToServer(data);
             if (opcode != PlayerUpdate)
                 return data;
             if (data.Length < 3)
@@ -163,6 +166,19 @@ namespace LandmarkEmulator.Gateway.Network
             }
             if (opcode == ClientUpdate && data.Length >= 4 && data[2] == ItemUpdateSub && data[3] == 0)
                 return ItemUpdateConverter.Convert(data);
+            if (opcode == Abilities)
+            {
+                // u16 sub. The caster info and the cast answers are converted; the other subs keep 0.695's bodies.
+                if (data.Length >= 4 && data[2] == CasterInfoReplySub && data[3] == 0)
+                    return CasterInfoConverter.Convert(data);
+                if (data.Length >= 4 && data[2] == CastConverter.CastSuccessSub && data[3] == 0)
+                    return CastConverter.SuccessToClient(data);
+                if (data.Length >= 4 && data[2] == CastConverter.CastFailSub && data[3] == 0)
+                    return CastConverter.FailToClient(data);
+                if (data.Length >= 4 && heldBack.Add(data[2] | data[3] << 8 | Abilities << 16))
+                    log.Info($"0.522: holding back Abilities sub 0x{data[2] | data[3] << 8:X}: {Show(data)}");
+                return null;
+            }
             if (opcode == Equipment)
             {
                 if (data.Length > 2 && data[2] is EquipmentSetSlotSub or EquipmentUnsetSlotSub)
